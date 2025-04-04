@@ -17,7 +17,7 @@ namespace MyWebApi.Controllers
         public IActionResult Get()
         {
             // Log a message at the Information level
-            var message = "Hello World from InfoController. This is a sample message.";
+            var message = "Hello World from InfoController.";
             _logger.LogInformation(message);
             return Ok(message);
         }
