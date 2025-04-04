@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
       
       # Fetches the base branch (e.g., main) from the remote repository
-      - name: Fetch base branch
+      - name: Fetch Base Branch
         run: |
           git fetch origin ${{ github.base_ref }}
 
@@ -35,12 +35,10 @@ jobs:
         run: |
           echo "Generating diff between ${{ github.base_ref }} and ${{ github.head_ref }}"
           DIFF=$(git diff origin/${{ github.base_ref }}...${{ github.head_ref }})
-          echo "diff_output<<EOF" >> $GITHUB_ENV
-          echo "$DIFF" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "diff_output=$DIFF" >> $GITHUB_ENV
 
       # Step 4: Output the diff (optional)
-      - name: Print diff
+      - name: Print Diff
         run: |
           echo "Diff Output:"
           echo "${{ env.diff_output }}"
@@ -50,7 +48,24 @@ jobs:
         run: |
           echo "${{ env.diff_output }}" > changes.diff
 
-      # - name: Install Ollama CLI
-      #   run: |
-      #     curl -fsSL https://ollama.com/install.sh | sh
-      #     ollama --version
+      - name: Install Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama --version
+
+      - name: Pull Model
+        run: |
+          ollama pull ${{ env.MODEL_NAME }} || { echo "Failed to pull model"; exit 1; }
+          ollama list
+
+      - name: Code Review
+        run: |
+          prompt=$(echo "Please review the following code changes and provide feedback:\n\n${{ env.diff_output }}\n\nFeedback:" | sed 's/"/\\"/g')
+          RAW_RESPONSE=$(curl -s -X POST http://localhost:11434/api/generate \
+            -d '{
+                  "model": "'"${{ env.MODEL_NAME }}"'",
+                  "prompt": "'"${prompt}"'",
+                  "temperature": 0.5,
+                  "stream": false
+                }' || { echo "API call failed"; exit 1; })
+          echo "RAW RESPONSE:\n$RAW_RESPONSE"
