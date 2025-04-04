@@ -36,7 +36,7 @@ jobs:
 
       # Step 4: Upload the diff file as an artifact (optional)
       - name: Upload Diff as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pr-diff
           path: changes.diff
