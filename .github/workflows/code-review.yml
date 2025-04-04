@@ -3,7 +3,8 @@ name: PR Code Review with Ollama
 # Trigger the workflow when a pull request is opened or updated
 on:
   pull_request_target:
-    types: [opened, synchronize]	
+    branches:
+      - main
 
 jobs:
   code-review:
