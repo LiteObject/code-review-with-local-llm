@@ -1,4 +1,4 @@
-name: PR Code Review with Ollama
+name: PR Code Review with LLM
 
 # Trigger the workflow when a pull request is opened or updated
 on:
@@ -14,58 +14,74 @@ jobs:
     env:
       MODEL_NAME: "llama3.2:latest"
     steps:
-      # Checkout the repository code
+      # Step 1: Checkout the repository code
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           # Checks out the code from the pull request's head branch.
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-      
-      # Fetches the base branch (e.g., main) from the remote repository
+
+      # Step 2: Fetch the base branch (e.g., main) from the remote repository
       - name: Fetch Base Branch
         run: |
           git fetch origin ${{ github.base_ref }}
 
-      # - name: Fetch Pull Request Branch
-      #   run: git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
-
+      # Step 3: Generate the diff between the base branch and the PR branch
       - name: Generate Diff
-        id: generate-diff  
+        id: generate-diff
         run: |
           echo "Generating diff between ${{ github.base_ref }} and ${{ github.head_ref }}"
-          DIFF=$(git diff origin/${{ github.base_ref }}...${{ github.head_ref }})
-          echo "diff_output=$DIFF" >> $GITHUB_ENV
+          git diff origin/${{ github.base_ref }}...${{ github.head_ref }} > changes.diff
 
-      # Step 4: Output the diff (optional)
-      - name: Print Diff
-        run: |
-          echo "Diff Output:"
-          echo "${{ env.diff_output }}"
+      # Step 4: Upload the diff file as an artifact (optional)
+      - name: Upload Diff as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pr-diff
+          path: changes.diff
 
-      # Step 5: Save the diff to a file (optional)
-      - name: Save diff to file
-        run: |
-          echo "${{ env.diff_output }}" > changes.diff
-
+      # Step 5: Install Ollama
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama --version
 
+      # Step 6: Pull the specified model
       - name: Pull Model
         run: |
           ollama pull ${{ env.MODEL_NAME }} || { echo "Failed to pull model"; exit 1; }
           ollama list
 
+      # Step 7: Read the diff file and prepare the prompt for Ollama
+      - name: Prepare Prompt
+        id: prepare-prompt
+        run: |
+          DIFF=$(cat changes.diff)
+          PROMPT=$(echo "Please review the following code changes and provide feedback:\n\n$DIFF\n\nFeedback:" | sed 's/"/\\"/g')
+          echo "prompt=$PROMPT" >> $GITHUB_ENV
+
+      # Step 8: Perform code review using Ollama
       - name: Code Review
         run: |
-          prompt=$(echo "Please review the following code changes and provide feedback:\n\n${{ env.diff_output }}\n\nFeedback:" | sed 's/"/\\"/g')
           RAW_RESPONSE=$(curl -s -X POST http://localhost:11434/api/generate \
             -d '{
                   "model": "'"${{ env.MODEL_NAME }}"'",
-                  "prompt": "'"${prompt}"'",
+                  "prompt": "'"${{ env.prompt }}"'",
                   "temperature": 0.5,
                   "stream": false
                 }' || { echo "API call failed"; exit 1; })
           echo "RAW RESPONSE:\n$RAW_RESPONSE"
+
+      # Step 9: Optionally save the response as an artifact
+      - name: Save Response as Artifact
+        run: |
+          echo "$RAW_RESPONSE" > response.json
+        if: always()
+
+      - name: Upload Response as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ollama-response
+          path: response.json
+        if: always()
