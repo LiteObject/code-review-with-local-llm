@@ -15,16 +15,53 @@ jobs:
       MODEL_NAME: "llama3.2:latest"
     steps:
       # Checkout the repository code
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          # Checks out the code from the pull request's head branch.
           ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Fetch pull request branch
-        run: git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
-
-      - name: Generate diff
+          fetch-depth: 0
+      
+      # Fetches the base branch (e.g., main) from the remote repository
+      - name: Fetch base branch
         run: |
-          git diff ${{ github.event.pull_request.base.sha }} pr-branch > change.diff
-          echo "Diff generated successfully."
-          echo "Diff content:" $(cat change.diff)
+          git fetch origin ${{ github.base_ref }}
+
+      # - name: Fetch Pull Request Branch
+      #   run: git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
+
+      - name: Generate Diff
+        id: generate-diff  
+        run: |
+          echo "Generating diff between ${{ github.base_ref }} and ${{ github.head_ref }}"
+          DIFF=$(git diff origin/${{ github.base_ref }}...${{ github.head_ref }})
+          echo "diff_output<<EOF" >> $GITHUB_ENV
+          echo "$DIFF" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Check Diff Size
+        id: check_diff_size
+        run: |
+          set -e
+          DIFF_SIZE=$(wc -c < change.diff)
+          echo "diff_size=$DIFF_SIZE" >> $GITHUB_OUTPUT
+          if (( DIFF_SIZE > 1000000 )); then
+            echo "Diff is too large, skipping review."
+            exit 0
+          fi
+
+        # Step 4: Output the diff (optional)
+      - name: Print diff
+        run: |
+          echo "Diff Output:"
+          echo "${{ env.diff_output }}"
+
+      # Step 5: Save the diff to a file (optional)
+      - name: Save diff to file
+        run: |
+          echo "${{ env.diff_output }}" > changes.diff
+
+      # - name: Install Ollama CLI
+      #   run: |
+      #     curl -fsSL https://ollama.com/install.sh | sh
+      #     ollama --version
