@@ -79,9 +79,9 @@ jobs:
           echo "$RAW_RESPONSE" > response.json
         if: always()
 
-      - name: Upload Response as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: llM-response
-          path: response.json
-        if: always()
+      # - name: Upload Response as Artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: llM-response
+      #     path: response.json
+      #   if: always()
