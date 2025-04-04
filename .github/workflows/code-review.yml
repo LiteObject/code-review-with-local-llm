@@ -28,7 +28,7 @@ jobs:
       - name: Generate Diff
         run: |
           set -e
-          git diff $BASE_COMMIT pr-branch > change.diff
+          git diff $GITHUB_BASE_REF pr-branch > change.diff
           echo "Diff generated successfully."
           echo "Diff content:" $(cat change.diff)
 
