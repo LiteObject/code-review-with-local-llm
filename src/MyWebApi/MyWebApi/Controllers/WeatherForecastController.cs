@@ -16,6 +16,7 @@ namespace MyWebApi.Controllers
         [HttpGet(Name = "Get")]
         public IActionResult Get()
         {
+            _logger.LogInformation("Hello World from InfoController!");
             return Ok("Hello World");
         }
     }
