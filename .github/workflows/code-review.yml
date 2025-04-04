@@ -28,9 +28,7 @@ jobs:
       - name: Generate Diff
         run: |
           set -e
-          git fetch origin main:main # Fetch the main branch
-          BASE_COMMIT=$(git merge-base main pr-branch)
-          git diff $BASE_COMMIT pr-branch > change.diff || { echo "Error generating diff"; exit 1; }
+          git diff $BASE_COMMIT pr-branch > change.diff
           echo "Diff generated successfully."
           echo "Diff content:" $(cat change.diff)
 
