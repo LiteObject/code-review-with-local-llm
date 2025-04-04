@@ -16,6 +16,8 @@ namespace MyWebApi.Controllers
         [HttpGet(Name = "Get")]
         public IActionResult Get()
         {
+            // Log a message at the Information level
+            var message = "Hello World from InfoController!";
             _logger.LogInformation("Hello World from InfoController!");
             return Ok("Hello World");
         }

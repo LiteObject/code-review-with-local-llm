@@ -39,18 +39,7 @@ jobs:
           echo "$DIFF" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # - name: Check Diff Size
-      #   id: check_diff_size
-      #   run: |
-      #     set -e
-      #     DIFF_SIZE=$(wc -c < change.diff)
-      #     echo "diff_size=$DIFF_SIZE" >> $GITHUB_OUTPUT
-      #     if (( DIFF_SIZE > 1000000 )); then
-      #       echo "Diff is too large, skipping review."
-      #       exit 0
-      #     fi
-
-        # Step 4: Output the diff (optional)
+      # Step 4: Output the diff (optional)
       - name: Print diff
         run: |
           echo "Diff Output:"
