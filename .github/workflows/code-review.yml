@@ -78,15 +78,30 @@ jobs:
         shell: /usr/bin/bash -e {0}
 
       # Step 9: Perform code review using Ollama
+      # - name: Code Review
+      #   run: |
+      #     RAW_RESPONSE=$(curl -s -X POST http://localhost:11434/api/generate \
+      #       -d '{
+      #             "model": "'"${{ env.MODEL_NAME }}"'",
+      #             "prompt": "'"${{ env.prompt }}"'",
+      #             "temperature": 0.5,
+      #             "stream": false
+      #           }' || { echo "API call failed"; exit 1; })
+      #     echo "RAW RESPONSE:\n$RAW_RESPONSE"
+
       - name: Code Review
         run: |
+          PAYLOAD=$(jq -n \
+            --arg model "$MODEL_NAME" \
+            --arg prompt "$prompt" \
+            '{
+              model: $model,
+              prompt: $prompt,
+              temperature: 0.5,
+              stream: false
+            }')
           RAW_RESPONSE=$(curl -s -X POST http://localhost:11434/api/generate \
-            -d '{
-                  "model": "'"${{ env.MODEL_NAME }}"'",
-                  "prompt": "'"${{ env.prompt }}"'",
-                  "temperature": 0.5,
-                  "stream": false
-                }' || { echo "API call failed"; exit 1; })
+            -d "$PAYLOAD" || { echo "API call failed"; exit 1; })
           echo "RAW RESPONSE:\n$RAW_RESPONSE"
 
       # Step 9: Optionally save the response as an artifact
