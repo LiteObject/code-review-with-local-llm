@@ -39,6 +39,7 @@ jobs:
         run: |
           # Remove metadata lines and retain only actual code changes (+/-)
           grep -E '^(\+|-)' changes.diff | sed 's/^+/Added: /; s/^-/Removed: /' > sanitized_diff.txt
+ 
 
       # Step 4: Upload the diff file as an artifact (optional)
       - name: Upload Diff as Artifact
@@ -60,12 +61,21 @@ jobs:
           ollama list
 
       # Step 7: Read the diff file and prepare the prompt for Ollama
+      # - name: Prepare Prompt
+      #   id: prepare-prompt
+      #   run: |
+      #     DIFF=$(cat sanitized_diff.txt)
+      #     PROMPT=$(echo "Please review the following code changes and provide feedback:\n\n$DIFF\n\nFeedback:" | sed 's/"/\\"/g')
+      #     echo "prompt=$PROMPT" >> $GITHUB_ENV
+
       - name: Prepare Prompt
-        id: prepare-prompt
         run: |
           DIFF=$(cat sanitized_diff.txt)
           PROMPT=$(echo "Please review the following code changes and provide feedback:\n\n$DIFF\n\nFeedback:" | sed 's/"/\\"/g')
-          echo "prompt=$PROMPT" >> $GITHUB_ENV
+          echo "prompt<<EOF" >> $GITHUB_ENV
+          echo "$PROMPT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        shell: /usr/bin/bash -e {0}
 
       # Step 8: Perform code review using Ollama
       - name: Code Review
