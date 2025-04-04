@@ -1,0 +1,30 @@
+name: PR Code Review with Ollama
+
+# Trigger the workflow when a pull request is opened or updated
+on:
+  pull_request_target:
+    branches:
+      - main
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      MODEL_NAME: "llama3.2:latest"
+    steps:
+      # Checkout the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Fetch pull request branch
+        run: git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
+
+      - name: Generate diff
+        run: |
+          git diff ${{ github.event.pull_request.base.sha }} pr-branch > change.diff
+          echo "Diff generated successfully."
+          echo "Diff content:" $(cat change.diff)
