@@ -59,3 +59,15 @@ jobs:
         run: |
           ollama pull ${{ env.MODEL_NAME }}
           ollama list
+
+      - name: Code Review
+        run: |
+          RAW_RESPONSE=$(curl -s -X POST http://localhost:11434/api/generate \
+            -d '{
+                  "model": "${{ env.MODEL_NAME }}",
+                  "prompt": "Please review the following code changes and provide feedback:\n\n${{ env.diff_output }}\n\nFeedback:",
+                  "temperature": 0.5,
+                  "stream": false
+                }'
+          )
+          echo "RAW RESPONSE:\n$RAW_RESPONSE""`
