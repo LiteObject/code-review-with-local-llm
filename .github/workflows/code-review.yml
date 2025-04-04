@@ -34,12 +34,18 @@ jobs:
           echo "Generating diff between ${{ github.base_ref }} and ${{ github.head_ref }}"
           git diff origin/${{ github.base_ref }}...${{ github.head_ref }} > changes.diff
 
+      # Step 4: Sanitize the diff file
+      - name: Sanitize Diff
+        run: |
+          # Remove metadata lines and retain only actual code changes (+/-)
+          grep -E '^(\+|-)' changes.diff | sed 's/^+/Added: /; s/^-/Removed: /' > sanitized_diff.txt
+
       # Step 4: Upload the diff file as an artifact (optional)
       - name: Upload Diff as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pr-diff
-          path: changes.diff
+          name: sanitized-pr-diff
+          path: sanitized_diff.txt
 
       # Step 5: Install Ollama
       - name: Install Ollama
@@ -57,7 +63,7 @@ jobs:
       - name: Prepare Prompt
         id: prepare-prompt
         run: |
-          DIFF=$(cat changes.diff)
+          DIFF=$(cat sanitized_diff.txt)
           PROMPT=$(echo "Please review the following code changes and provide feedback:\n\n$DIFF\n\nFeedback:" | sed 's/"/\\"/g')
           echo "prompt=$PROMPT" >> $GITHUB_ENV
 
