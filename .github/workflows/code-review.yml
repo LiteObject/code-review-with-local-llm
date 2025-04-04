@@ -74,14 +74,7 @@ jobs:
           echo "RAW RESPONSE:\n$RAW_RESPONSE"
 
       # Step 9: Optionally save the response as an artifact
-      - name: Save Response as Artifact
-        run: |
-          echo "$RAW_RESPONSE" > response.json
-        if: always()
-
-      # - name: Upload Response as Artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: llM-response
-      #     path: response.json
+      # - name: Save Response as Artifact
+      #   run: |
+      #     echo "$RAW_RESPONSE" > response.json
       #   if: always()
