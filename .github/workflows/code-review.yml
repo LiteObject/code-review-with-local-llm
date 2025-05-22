@@ -1,4 +1,4 @@
-name: PR Code Review with LLM
+name: PR Code Review with AI
 
 # Trigger the workflow when a pull request is opened or updated
 on:
@@ -8,40 +8,37 @@ on:
 
 jobs:
   code-review:
+    name: Review Changes with AI
     runs-on: ubuntu-latest
     permissions:
-      issues: write
+      issues: write  # Allows the workflow to write comments on issues and pull requests
+      pull-requests: write  # Allows the workflow to write comments on pull requests
     env:
       MODEL_NAME: "llama3.2:latest"
-    steps:
-      # Step 1: Checkout the repository code
+    steps:      
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # Checks out the code from the pull request's head branch.
-          ref: ${{ github.event.pull_request.head.ref }}
+          # Checks out the code from the pull request's head branch, the feature branch with changes.
+          # ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      # Step 2: Fetch the base branch (e.g., main) from the remote repository
-      - name: Fetch Base Branch
-        run: |
-          git fetch origin ${{ github.base_ref }}
-
-      # Step 3: Generate the diff between the base branch and the PR branch
+      # - name: Fetch Base Branch
+      #   run: |
+      #     git fetch origin ${{ github.base_ref }}
+      
       - name: Generate Diff
         id: generate-diff
         run: |
           echo "Generating diff between ${{ github.base_ref }} and ${{ github.head_ref }}"
-          git diff --unified=5 origin/${{ github.base_ref }}...${{ github.head_ref }} > changes.diff
+          # git diff --unified=5 origin/${{ github.base_ref }}...${{ github.head_ref }} > changes.diff
+          git diff --unified=0 origin/${{ github.event.pull_request.base.ref }}..${{ github.event.pull_request.head.ref }} > changes.diff
 
-      # Step 4: Sanitize the diff file
       - name: Sanitize Diff
         run: |
           # Remove metadata lines and retain only actual code changes (+/-)
           grep -E '^(\+|-)' changes.diff | sed 's/^+/Added: /; s/^-/Removed: /' > sanitized_diff.txt
- 
-
-      # Step 5: Upload the diff file as an artifact (optional)
+     
       - name: Upload Diff as Artifact
         uses: actions/upload-artifact@v4
         with:
