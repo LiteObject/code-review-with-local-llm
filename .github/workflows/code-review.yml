@@ -19,13 +19,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # Checks out the code from the pull request's head branch, the feature branch with changes.
-          # ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      # - name: Fetch Base Branch
-      #   run: |
-      #     git fetch origin ${{ github.base_ref }}
+          fetch-depth: 0 # Fetches all history for the entire branch
       
       - name: Generate Diff
         id: generate-diff
@@ -44,47 +38,23 @@ jobs:
         with:
           name: sanitized-pr-diff
           path: sanitized_diff.txt
-
-      # Step 6: Install Ollama
+  
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama --version
 
-      # Step 7: Pull the specified model
       - name: Pull Model
         run: |
           ollama pull ${{ env.MODEL_NAME }} || { echo "Failed to pull model"; exit 1; }
           ollama list
 
-      # Step 8: Read the diff file and prepare the prompt for Ollama
-      # - name: Prepare Prompt
-      #   run: |
-      #     DIFF=$(cat sanitized_diff.txt)
-      #     PROMPT=$(echo "Please review the following code changes and provide feedback:\n\n$DIFF\n\nFeedback:" | sed 's/"/\\"/g')
-      #     echo "prompt<<EOF" >> $GITHUB_ENV
-      #     echo "$PROMPT" >> $GITHUB_ENV
-      #     echo "EOF" >> $GITHUB_ENV
-      #   shell: /usr/bin/bash -e {0}
-
       - name: Prepare Prompt
         run: |
           DIFF=$(cat sanitized_diff.txt)
-          PROMPT=$(echo "Please review the following code changes and provide feedback:\n\n$DIFF\n\nFeedback:" | jq -sR .)
+          PROMPT=$(echo "Please review the following code changes, summarize the changes, and provide feedback:\n\n$DIFF\n\nFeedback:" | jq -sR .)
           echo "prompt=$PROMPT" >> $GITHUB_ENV
         shell: /usr/bin/bash -e {0}
-
-      # Step 9: Perform code review using Ollama
-      # - name: Code Review
-      #   run: |
-      #     RAW_RESPONSE=$(curl -s -X POST http://localhost:11434/api/generate \
-      #       -d '{
-      #             "model": "'"${{ env.MODEL_NAME }}"'",
-      #             "prompt": "'"${{ env.prompt }}"'",
-      #             "temperature": 0.5,
-      #             "stream": false
-      #           }' || { echo "API call failed"; exit 1; })
-      #     echo "RAW RESPONSE:\n$RAW_RESPONSE"
 
       - name: Code Review
         run: |
@@ -101,8 +71,23 @@ jobs:
             -d "$PAYLOAD" || { echo "API call failed"; exit 1; })
           echo "RAW RESPONSE:\n$RAW_RESPONSE"
 
-      # Step 9: Optionally save the response as an artifact
-      # - name: Save Response as Artifact
-      #   run: |
-      #     echo "$RAW_RESPONSE" > response.json
-      #   if: always()
+          # Try to extract the response, fallback to a default message if not found
+          REVIEW=$(echo "$RAW_RESPONSE" | jq -r '.response')          
+
+          if [ -z "$REVIEW" ]; then
+            echo "Model did not return a valid review. Check RAW_RESPONSE for errors."
+            REVIEW="Model did not return a valid review. RAW_RESPONSE: $RAW_RESPONSE"
+          fi
+
+      - name: Post Review Comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const review = process.env.REVIEW;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `### AI Review\n\n${review}`
+            });
