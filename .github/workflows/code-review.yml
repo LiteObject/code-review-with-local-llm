@@ -29,7 +29,6 @@ jobs:
         run: |
           echo "Generating diff between ${{ github.base_ref }} and ${{ github.head_ref }}"
           git diff --unified=5 origin/${{ github.base_ref }}...${{ github.head_ref }} > changes.diff
-          # git diff --unified=0 origin/${{ github.event.pull_request.base.ref }}..${{ github.event.pull_request.head.ref }} > changes.diff
 
       # - name: Generate Diff
       #   id: generate-diff
