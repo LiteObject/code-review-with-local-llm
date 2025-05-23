@@ -54,10 +54,23 @@ jobs:
       - name: Prepare Prompt
         run: |
           DIFF=$(cat sanitized_diff.txt)
-          PROMPT=$(echo "Please review the following code changes, summarize the changes, and provide feedback:\n\n$DIFF\n\nFeedback:" | jq -sR .)
+
+          PROMPT="Please review the following code changes, summarize the changes, and provide feedback:
+
+          $DIFF
+
+          Feedback:"
+
           echo "PROMPT:\n$PROMPT"
+
           # Set the prompt as an environment variable for later steps
-          echo "prompt=$PROMPT" >> $GITHUB_ENV
+          # echo "prompt=$PROMPT" >> $GITHUB_ENV
+
+          # Export PROMPT so it's available to later steps
+          echo "prompt<<EOF" >> $GITHUB_ENV
+          echo "$PROMPT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
         shell: /usr/bin/bash -e {0}
 
       - name: Code Review
