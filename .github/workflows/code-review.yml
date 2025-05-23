@@ -64,7 +64,7 @@ jobs:
         run: |
           PAYLOAD=$(jq -n \
             --arg model "$MODEL_NAME" \
-            --arg prompt "$prompt" \
+            --arg prompt "$PROMPT" \
             '{
               model: $model,
               prompt: $prompt,
@@ -76,10 +76,10 @@ jobs:
           echo "RAW RESPONSE:\n$RAW_RESPONSE"
 
           # Try to extract the response, fallback to a default message if not found
-          REVIEW=$(echo "$RAW_RESPONSE" | jq -r '.response')          
+          REVIEW=$(echo "$RAW_RESPONSE" | jq -r '.response // empty')
 
-          if [ -z "$REVIEW" ]; then
-            echo "Model did not return a valid review. Check RAW_RESPONSE for errors."
+          if [ -z "$REVIEW" ] || [ "$REVIEW" = "null" ]; then
+            echo "Error: .response field is missing or empty in the API response."
             REVIEW="Model did not return a valid review. RAW_RESPONSE: $RAW_RESPONSE"
           fi
 
@@ -88,7 +88,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const review = process.env.REVIEW;
+            const review = process.env.REVIEW || 'No review generated due to an error.';
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
