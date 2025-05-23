@@ -55,6 +55,8 @@ jobs:
         run: |
           DIFF=$(cat sanitized_diff.txt)
           PROMPT=$(echo "Please review the following code changes, summarize the changes, and provide feedback:\n\n$DIFF\n\nFeedback:" | jq -sR .)
+          echo "PROMPT:\n$PROMPT"
+          # Set the prompt as an environment variable for later steps
           echo "prompt=$PROMPT" >> $GITHUB_ENV
         shell: /usr/bin/bash -e {0}
 
