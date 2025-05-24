@@ -16,7 +16,7 @@ namespace MyWebApi.Controllers
         [HttpGet(Name = "Get")]
         public IActionResult Get()
         {
-            var _helloworld = "Hello World";
+            var _helloworld = "Hello World 123";
             var message = "Hello World from InfoController. This is a sample message.";
             _logger.LogInformation(message);
             return Ok(message);
