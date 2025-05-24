@@ -65,12 +65,12 @@ jobs:
           echo "Verifying model availability via API..."
           curl -s http://localhost:11434/api/tags | jq '.'
 
-      - name: Check Ollama API Health
-        run: |
-          if ! curl -sf http://localhost:11434/api/tags; then
-            echo "Ollama API is not responding."
-            exit 1
-          fi
+      # - name: Check Ollama API Health
+      #   run: |
+      #     if ! curl -sf http://localhost:11434/api/tags; then
+      #       echo "Ollama API is not responding."
+      #       exit 1
+      #     fi
 
       - name: Wait for Ollama to be ready
         run: |
@@ -91,9 +91,16 @@ jobs:
             echo "No changes detected in the diff"
             DIFF="No code changes detected in this pull request."
           fi
-          PROMPT="Please review the following code changes, summarize the changes, and provide a short feedback:\n\n$DIFF\n\nFeedback:"
+          
+          PROMPT="You are an experienced software engineer reviewing a pull request. Carefully review the following code changes for correctness, clarity, maintainability, and potential issues. Summarize what was changed, point out any problems or improvements, and provide constructive, actionable feedback as a code reviewer would in a real PR review.
+
+          $DIFF
+
+          PR Review:"
+
           echo "PROMPT:"
           echo "$PROMPT"
+          
           # Export PROMPT so it's available to later steps
           echo "PROMPT<<EOF" >> $GITHUB_ENV
           echo "$PROMPT" >> $GITHUB_ENV
