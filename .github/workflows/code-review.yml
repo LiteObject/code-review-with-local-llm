@@ -28,7 +28,18 @@ jobs:
         id: generate-diff
         run: |
           echo "Generating diff between origin/${{ github.base_ref }} and origin/${{ github.head_ref }}"
-          git diff --unified=10 origin/${{ github.base_ref }}...origin/${{ github.head_ref }} > changes.diff      
+          git diff --unified=10 origin/${{ github.base_ref }}...origin/${{ github.head_ref }} > changes.diff
+          
+          # Check if diff is empty
+          if [ ! -s changes.diff ]; then
+            echo "No changes detected"
+            echo "NO_CHANGES=true" >> $GITHUB_ENV
+            exit 0
+          fi
+          
+          # Limit diff size to avoid token limits (first 100 lines)
+          head -100 changes.diff > limited_changes.diff
+          mv limited_changes.diff changes.diff
 
       - name: Sanitize Diff
         run: |
@@ -56,7 +67,18 @@ jobs:
           # Verify model is available via API
           echo "Verifying model availability via API..."
           curl -s http://localhost:11434/api/tags | jq '.'
-
+      
+      - name: Wait for Ollama to be ready
+        run: |
+          for i in {1..10}; do
+            if curl -s http://localhost:11434/api/tags | jq '.'; then
+              echo "Ollama is ready."
+              break
+            fi
+            echo "Waiting for Ollama to be ready..."
+            sleep 3
+          done
+          
       - name: Prepare Prompt
         run: |
           DIFF=$(cat sanitized_diff.txt)
