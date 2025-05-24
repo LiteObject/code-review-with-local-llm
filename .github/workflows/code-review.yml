@@ -78,7 +78,7 @@ jobs:
             echo "Waiting for Ollama to be ready..."
             sleep 3
           done
-          
+
       - name: Prepare Prompt
         run: |
           DIFF=$(cat sanitized_diff.txt)
@@ -99,7 +99,7 @@ jobs:
           echo "$PROMPT"
 
           # Export PROMPT so it's available to later steps
-          echo "prompt<<EOF" >> $GITHUB_ENV
+          echo "PROMPT<<EOF" >> $GITHUB_ENV
           echo "$PROMPT" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
