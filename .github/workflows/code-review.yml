@@ -15,7 +15,7 @@ jobs:
       pull-requests: write  # Allows the workflow to write comments on pull requests
     env:
       MODEL_NAME: "llama3.2:latest"
-    steps:      
+    steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -23,20 +23,18 @@ jobs:
 
       - name: Fetch all branches
         run: git fetch --all
-      
+
       - name: Generate Diff
         id: generate-diff
         run: |
           echo "Generating diff between origin/${{ github.base_ref }} and origin/${{ github.head_ref }}"
           git diff --unified=10 origin/${{ github.base_ref }}...origin/${{ github.head_ref }} > changes.diff
-          
           # Check if diff is empty
           if [ ! -s changes.diff ]; then
             echo "No changes detected"
             echo "NO_CHANGES=true" >> $GITHUB_ENV
             exit 0
           fi
-          
           # Limit diff size to avoid token limits (first 100 lines)
           head -100 changes.diff > limited_changes.diff
           mv limited_changes.diff changes.diff
@@ -47,13 +45,13 @@ jobs:
           grep -E '^(\+|-)' changes.diff | sed 's/^+/Added: /; s/^-/Removed: /' > sanitized_diff.txt
           echo "Sanitized diff content:"
           cat sanitized_diff.txt
-     
+
       - name: Upload Diff as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sanitized-pr-diff
           path: sanitized_diff.txt
-  
+
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
@@ -63,11 +61,17 @@ jobs:
         run: |
           ollama pull ${{ env.MODEL_NAME }} || { echo "Failed to pull model"; exit 1; }
           ollama list
-
           # Verify model is available via API
           echo "Verifying model availability via API..."
           curl -s http://localhost:11434/api/tags | jq '.'
-      
+
+      - name: Check Ollama API Health
+        run: |
+          if ! curl -sf http://localhost:11434/api/tags; then
+            echo "Ollama API is not responding."
+            exit 1
+          fi
+
       - name: Wait for Ollama to be ready
         run: |
           for i in {1..10}; do
@@ -82,33 +86,24 @@ jobs:
       - name: Prepare Prompt
         run: |
           DIFF=$(cat sanitized_diff.txt)
-          
           # Check if diff is empty
           if [ -z "$DIFF" ]; then
             echo "No changes detected in the diff"
             DIFF="No code changes detected in this pull request."
           fi
-
-          PROMPT="Please review the following code changes, summarize the changes, and provide feedback:
-
-          $DIFF
-
-          Feedback:"
-
+          PROMPT="Please review the following code changes, summarize the changes, and provide a short feedback:\n\n$DIFF\n\nFeedback:"
           echo "PROMPT:"
           echo "$PROMPT"
-
           # Export PROMPT so it's available to later steps
           echo "PROMPT<<EOF" >> $GITHUB_ENV
           echo "$PROMPT" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
         shell: /usr/bin/bash -e {0}
 
       - name: Code Review
         run: |
           echo "Starting code review with model: $MODEL_NAME"
-
+          echo "PROMPT: $PROMPT"
           PAYLOAD=$(jq -n \
             --arg model "$MODEL_NAME" \
             --arg prompt "$PROMPT" \
@@ -118,25 +113,20 @@ jobs:
               temperature: 0.5,
               stream: false
             }')
-
+          echo "PAYLOAD: $PAYLOAD"
           echo "Sending request to Ollama API..."
           RAW_RESPONSE=$(curl -s -X POST http://localhost:11434/api/generate \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD" || { echo "API call failed"; exit 1; })
-
           echo "RAW RESPONSE:\n$RAW_RESPONSE"
-
           # Try to extract the response, fallback to a default message if not found
           REVIEW=$(echo "$RAW_RESPONSE" | jq -r '.response // empty')
-
           if [ -z "$REVIEW" ] || [ "$REVIEW" = "null" ]; then
             echo "Error: .response field is missing or empty in the API response."
             REVIEW="Model did not return a valid review. RAW_RESPONSE: $RAW_RESPONSE"
           fi
-
           echo "Final review content:"
           echo "$REVIEW"
-          
           # Export REVIEW for the next step
           echo "REVIEW<<EOF" >> $GITHUB_ENV
           echo "$REVIEW" >> $GITHUB_ENV
@@ -154,3 +144,11 @@ jobs:
               issue_number: context.issue.number,
               body: `### 🤖 AI Review\n\n${review}`
             });
+
+      - name: Add Job Summary
+        run: |
+          echo "### AI Code Review Completed" >> $GITHUB_STEP_SUMMARY
+          echo "Model: $MODEL_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "Prompt used:" >> $GITHUB_STEP_SUMMARY
+          echo "$PROMPT" >> $GITHUB_STEP_SUMMARY
+        shell: /usr/bin/bash -e {0}
