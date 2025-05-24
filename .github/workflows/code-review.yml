@@ -138,7 +138,7 @@ jobs:
           echo "$REVIEW"
           
           # Export REVIEW for the next step
-          echo "review<<EOF" >> $GITHUB_ENV
+          echo "REVIEW<<EOF" >> $GITHUB_ENV
           echo "$REVIEW" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
