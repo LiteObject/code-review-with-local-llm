@@ -14,6 +14,13 @@ namespace MyWebApi.Controllers
             _logger.LogInformation("InfoController instantiated.");
         }
 
+        /// <summary>
+        /// Gets a simple message.
+        /// This is a sample message to demonstrate the API functionality.
+        /// </summary>
+        /// <returns>
+        /// A string message indicating the API is working.
+        /// </returns>
         [HttpGet(Name = "Get")]
         public IActionResult Get()
         {
@@ -23,6 +30,13 @@ namespace MyWebApi.Controllers
             return Ok(message);
         }
 
+        /// <summary>
+        /// Gets a hello message.
+        /// This is a sample message to demonstrate the API functionality.
+        /// </summary>
+        /// <returns>
+        /// A string message indicating the API is working.
+        /// </returns>
         [HttpGet("hello")]
         public IActionResult Hello()
         {
